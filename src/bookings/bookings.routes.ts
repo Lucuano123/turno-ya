@@ -22,6 +22,7 @@ function sanitizeBookingInput(req:any, res:any, next:any) {
 
   req.body.sanitizedInput = {
     client_id: req.body.client_id,
+    client_name: req.body.client_name,
     service_id: req.body.service_id,
     booking_date: req.body.booking_date,
     start_time: req.body.start_time,

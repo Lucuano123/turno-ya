@@ -5,6 +5,7 @@ export class Booking {
   constructor(
     public id: number,
     public client_id: number,
+    public client_name: string,
     public service_id: number,
     public booking_date: Date,
     public start_time: string,

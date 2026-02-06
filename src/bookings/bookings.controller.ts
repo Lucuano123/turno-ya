@@ -56,6 +56,7 @@ export class BookingsController {
       const newBooking = new Booking(
         input.id,
         input.client_id,
+        input.client_name,
         input.service_id,
         new Date(input.booking_date),
         input.start_time,
@@ -160,6 +161,7 @@ export class BookingsController {
       const updatedBooking = new Booking(
         id,
         input.client_id,
+        input.client_name,
         input.service_id,
         new Date(input.booking_date),
         input.start_time,

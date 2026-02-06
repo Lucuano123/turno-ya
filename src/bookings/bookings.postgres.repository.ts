@@ -8,6 +8,7 @@ export class BookingsPostgresRepository {
       const res = await pool.query(
         `INSERT INTO bookings (
           client_id, 
+          client_name,
           service_id, 
           booking_date, 
           start_time, 
@@ -21,6 +22,7 @@ export class BookingsPostgresRepository {
          RETURNING *`,
         [
           booking.client_id,
+          booking.client_name,
           booking.service_id,
           booking.booking_date,
           booking.start_time,
@@ -36,6 +38,7 @@ export class BookingsPostgresRepository {
       return new Booking(
         newBooking.id,
         newBooking.client_id,
+        newBooking.client_name,
         newBooking.service_id,
         newBooking.booking_date,
         newBooking.start_time,
@@ -64,6 +67,7 @@ export class BookingsPostgresRepository {
   async findAll(): Promise<Booking[]> {
     const query = `SELECT  id,
         client_id,
+        client_name,
         service_id,
         booking_date,
         start_time,
@@ -92,6 +96,7 @@ export class BookingsPostgresRepository {
       return res.rows.map(row => new Booking(
         row.id,
         row.client_id,
+        row.client_name,
         row.service_id,
         row.booking_date,
         row.start_time,
@@ -123,19 +128,21 @@ export class BookingsPostgresRepository {
       UPDATE bookings
       SET 
         client_id = $1,
-        service_id = $2,
-        booking_date = $3,
-        start_time = $4,
-        end_time = $5,
-        booking_status = $6,
-        treatment_id = $7,
+        client_name = $2,
+        service_id = $3,
+        booking_date = $4,
+        start_time = $5,
+        end_time = $6,
+        booking_status = $7,
+        treatment_id = $8,
         updated_at = NOW()
-      WHERE id = $8
+      WHERE id = $9
       RETURNING *;
     `;
 
       const values = [
         booking.client_id,
+        booking.client_name,
         booking.service_id,
         booking.booking_date,
         booking.start_time,
@@ -154,6 +161,7 @@ export class BookingsPostgresRepository {
       return new Booking(
         updated.id,
         updated.client_id,
+        updated.client_name,
         updated.service_id,
         updated.booking_date,
         updated.start_time,
