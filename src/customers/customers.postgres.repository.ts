@@ -1,72 +1,55 @@
 import { pool } from '../config/database.config.js';
 import { Customer } from './customers.entity.js';
-import { CustomersService } from './customers.service.js';
+import { UpdateCustomerInput } from './customers.schemas.js';
+import { ConflictError } from '../errors/custom-errors.js';
 
 export class CustomersPostgresRepository {
-  prisma: any;
-
   
-
   async countBookingsForCustomer(customerId: number): Promise<number> {
-  const query = `
-    SELECT COUNT(*) AS total
-    FROM bookings
-    WHERE client_id = $1
-  `;
-
-  const result = await pool.query(query, [customerId]);
-
-  return Number(result.rows[0].total);
-}
-
-
-
+    const query = `
+      SELECT COUNT(*) AS total
+      FROM bookings
+      WHERE client_id = \$1
+    `;
+    const result = await pool.query(query, [customerId]);
+    return Number(result.rows[0].total);
+  }
 
   async findById(id: number): Promise<Customer | null> {
-    try {
-      const query = 'SELECT * FROM customers WHERE id = $1';
-      const { rows } = await pool.query<Customer>(query, [id]);
-      return rows[0] || null;
-    } catch (error) {
-      throw new Error('Error al obtener cliente por ID');
-    }
+    const query = 'SELECT * FROM customers WHERE id = \$1';
+    const { rows } = await pool.query<Customer>(query, [id]);
+    return rows[0] || null;
   }
 
   async findAll(): Promise<Customer[]> {
-    const query = `SELECT  id,
+    const query = `
+      SELECT  
+        id,
         first_name || ' ' || last_name AS name,
         email,
         phone,
         created_at,
         status 
-        FROM customers 
-        ORDER BY id`;
-    try {
-      const { rows } = await pool.query<Customer>(query);
-      return rows;
-    } catch (error) {
-      throw new Error('Error al obtener todos los clientes');
-    }
+      FROM customers 
+      ORDER BY id
+    `;
+    const { rows } = await pool.query<Customer>(query);
+    return rows;
   }
 
   async updateStatus(id: number, status: 'approved' | 'rejected'): Promise<Customer> {
-    try {
-      const query = `
-        UPDATE customers 
-        SET status = $1, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = $2 
-        RETURNING *
-      `;
-      const { rows } = await pool.query<Customer>(query, [status, id]);
-      return rows[0];
-    } catch (error) {
-      throw new Error('Error al actualizar el estado del cliente');
-    }
+    const query = `
+      UPDATE customers 
+      SET status = \$1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = \$2 
+      RETURNING *
+    `;
+    const { rows } = await pool.query<Customer>(query, [status, id]);
+    return rows[0];
   }
 
   async findPendingUsers(): Promise<Customer[]> {
-    try {
-      const query = `
+    const query = `
       SELECT 
         id,
         first_name || ' ' || last_name AS name,
@@ -76,17 +59,15 @@ export class CustomersPostgresRepository {
         status
       FROM customers
       WHERE status = 'pending'
-      ORDER BY id`;
-      const { rows } = await pool.query<Customer>(query);
-      return rows;
-    } catch (error) {
-      throw new Error('Error al obtener usuarios pendientes');
-    }
+      ORDER BY id
+    `;
+    const { rows } = await pool.query<Customer>(query);
+    return rows;
   }
 
+  // ✅ Create - confía en que los datos ya vienen validados y hasheados
   async create(data: Partial<Customer>): Promise<Customer> {
-    try {
-      const query = `
+    const query = `
       INSERT INTO customers (
         first_name,
         last_name,
@@ -97,141 +78,89 @@ export class CustomersPostgresRepository {
         status,
         role
       )
-      VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8
-      )
-      RETURNING *;
-    `;
-
-      const params = [
-        data.first_name ?? null,
-        data.last_name ?? null,
-        data.email ?? null,
-        data.password ?? null,
-        data.phone ?? null,
-        data.birth_date ?? null, // debe ser formato YYYY-MM-DD
-        data.status ?? 'pending',
-        data.role ?? 'customer'
-      ];
-
-      const { rows } = await pool.query<Customer>(query, params);
-      return rows[0];
-
-    } catch (error) {
-      console.error('[CustomersPostgresRepository] Error en create:', error);
-      throw new Error('Error al crear cliente');
-    }
-  }
-
-
-  async update(id: number, data: Partial<Customer>): Promise<Customer> {
-    try {
-      // 1) Verifico si el cliente existe
-      const customer = await this.findById(id);
-      if (!customer) {
-        throw new Error('CUSTOMER_NOT_FOUND');
-      }
-
-      // 2) Validaciones de status/role
-      const allowedStatus = ['pending', 'approved', 'rejected'];
-      const allowedRoles = ['customer', 'professional'];
-
-      if (data.status && !allowedStatus.includes(data.status)) {
-        throw new Error(`INVALID_STATUS: ${data.status}`);
-      }
-
-      if (data.role && !allowedRoles.includes(data.role)) {
-        throw new Error(`INVALID_ROLE: ${data.role}`);
-      }
-
-      // 3) Formateo de fecha si viene en ISO con "T"
-      let birthDate = data.birth_date ?? customer.birth_date;
-
-      if (typeof birthDate === 'string' && birthDate.includes('T')) {
-        birthDate = birthDate.split('T')[0]; // yyyy-MM-dd
-      }
-
-      // 4) Merge final (data pisa a existing si viene definida)
-      const merged: Partial<Customer> = {
-        first_name: data.first_name ?? customer.first_name,
-        last_name: data.last_name ?? customer.last_name,
-        email: data.email ?? customer.email,
-        password: data.password ?? customer.password,
-        phone: data.phone ?? customer.phone,
-        birth_date: birthDate,
-        status: data.status ?? customer.status,
-        role: data.role ?? customer.role
-      };
-
-      // 5) Query final
-      const query = `
-      UPDATE customers SET
-        first_name = $1,
-        last_name = $2,
-        email = $3,
-        password = $4,
-        phone = $5,
-        birth_date = $6,
-        status = $7,
-        role = $8,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9
+      VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8)
       RETURNING *
     `;
 
-      const params = [
-        merged.first_name,
-        merged.last_name,
-        merged.email,
-        merged.password,
-        merged.phone,
-        merged.birth_date,
-        merged.status,
-        merged.role,
-        id
-      ];
+    const params = [
+      data.first_name,
+      data.last_name,
+      data.email,
+      data.password, // Ya viene hasheado del service
+      data.phone ?? null,
+      data.birth_date ?? null,
+      data.status,
+      data.role
+    ];
 
-      console.log('[UPDATE] Ejecutando:', { query, params });
-
-      const { rows } = await pool.query<Customer>(query, params);
-
-      if (!rows.length) {
-        throw new Error('CUSTOMER_NOT_FOUND');
-      }
-
-      return rows[0];
-
-    } catch (error: any) {
-      console.error('[CustomersPostgresRepository] Error en update:', {
-        message: error.message,
-        stack: error.stack
-      });
-
-      throw error;
-    }
+    const { rows } = await pool.query<Customer>(query, params);
+    return rows[0];
   }
 
+  // ✅ Update - merge manual simple (sin query dinámico)
+  async update(id: number, data: UpdateCustomerInput): Promise<Customer> {
+    const customer = await this.findById(id);
+    if (!customer) {
+      throw new Error('CUSTOMER_NOT_FOUND');
+    }
 
+    // Merge solo los campos permitidos
+    const merged = {
+      first_name: data.first_name ?? customer.first_name,
+      last_name: data.last_name ?? customer.last_name,
+      phone: data.phone ?? customer.phone,
+      birth_date: data.birth_date ?? customer.birth_date,
+      // Campos que NO se modifican desde update normal
+      email: customer.email,
+      password: customer.password,
+      status: customer.status,
+      role: customer.role
+    };
+
+    const query = `
+      UPDATE customers SET
+        first_name = \$1,
+        last_name = \$2,
+        email = \$3,
+        password = \$4,
+        phone = \$5,
+        birth_date = \$6,
+        status = \$7,
+        role = \$8,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = \$9
+      RETURNING *
+    `;
+
+    const params = [
+      merged.first_name,
+      merged.last_name,
+      merged.email,
+      merged.password,
+      merged.phone,
+      merged.birth_date,
+      merged.status,
+      merged.role,
+      id
+    ];
+
+    const { rows } = await pool.query<Customer>(query, params);
+    return rows[0];
+  }
 
   async delete(id: number): Promise<void> {
-  try {
-    const query = `DELETE FROM customers WHERE id = $1`;
-    await pool.query(query, [id]);
-  } catch (err: any) {
+    try {
+      const query = `DELETE FROM customers WHERE id = \$1`;
+      await pool.query(query, [id]);
+    } catch (err: any) {
+      console.error('[Repository] Error eliminando cliente:', err);
 
-    console.error('[Repository] Error eliminando cliente:', err);
+      // Detecta violación de FK
+      if (err.code === '23503') {
+        throw new ConflictError('El cliente tiene reservas asociadas');
+      }
 
-    // Detecta violación de FK de Postgres
-    if (err.code === '23503') {
-      throw new Error('CUSTOMER_HAS_BOOKINGS');
+      throw new Error('DELETE_ERROR');
     }
-
-    throw new Error('DELETE_ERROR');
   }
-}
-
-
-
-
-
 }

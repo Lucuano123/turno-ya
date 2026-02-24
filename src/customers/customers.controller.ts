@@ -1,14 +1,12 @@
 import { Request, Response } from 'express';
 import { CustomersService } from './customers.service.js';
 import { CustomersPostgresRepository } from './customers.postgres.repository.js';
-import { pool } from '../config/database.config.js';
-import { Customer } from './customers.entity.js';
+import { AppError } from '../errors/custom-errors.js';
 
 export class CustomersController {
   private customersService: CustomersService;
 
   constructor() {
-
     const repository = new CustomersPostgresRepository();
     this.customersService = new CustomersService(repository);
   }
@@ -20,14 +18,7 @@ export class CustomersController {
       const customers = await this.customersService.getAllCustomers();
       res.status(200).json({ data: customers });
     } catch (error) {
-      console.error('[CustomersController] Error en getAllCustomers:', error);
-      res.status(500).json({
-        error: {
-          message: 'Error al obtener todos los clientes',
-          code: 'SERVER_ERROR',
-          status: 500,
-        },
-      });
+      this.handleError(res, error);
     }
   }
 
@@ -38,14 +29,7 @@ export class CustomersController {
       const pendingUsers = await this.customersService.getPendingUsers();
       res.status(200).json({ data: pendingUsers });
     } catch (error) {
-      console.error('[CustomersController] Error en getPendingUsers:', error);
-      res.status(500).json({
-        error: {
-          message: 'Error al obtener usuarios pendientes',
-          code: 'SERVER_ERROR',
-          status: 500,
-        },
-      });
+      this.handleError(res, error);
     }
   }
 
@@ -56,18 +40,7 @@ export class CustomersController {
       const { id } = req.params;
       const { status } = req.body;
 
-      if (!['approved', 'rejected'].includes(status)) {
-        res.status(400).json({
-          error: {
-            message: 'Estado inválido. Debe ser "approved" o "rejected"',
-            code: 'INVALID_STATUS',
-            status: 400,
-          },
-        });
-        return;
-      }
-
-      const user = await this.customersService.validateUser(parseInt(id), status);
+      const user = await this.customersService.validateUser(Number(id), status);
 
       res.status(200).json({
         id: user.id,
@@ -75,54 +48,23 @@ export class CustomersController {
         status: user.status,
         message: 'Estado del usuario actualizado correctamente',
       });
-    } catch (error: any) {
-      console.error('[CustomersController] Error en validateUser:', error);
-
-      if (error.message === 'USER_NOT_FOUND') {
-        res.status(404).json({
-          error: {
-            message: 'Usuario no encontrado',
-            code: 'USER_NOT_FOUND',
-            status: 404,
-          },
-        });
-      } else if (error.message === 'USER_NOT_PENDING') {
-        res.status(400).json({
-          error: {
-            message: 'El usuario no está en estado pendiente',
-            code: 'USER_NOT_PENDING',
-            status: 400,
-          },
-        });
-      } else {
-        res.status(500).json({
-          error: {
-            message: 'Error del servidor',
-            code: 'SERVER_ERROR',
-            status: 500,
-          },
-        });
-      }
+    } catch (error) {
+      this.handleError(res, error);
     }
   }
 
-  // GET /api/customers/:id 
+  // ✅ GET /api/customers/:id - AHORA MÁS SIMPLE
   async getCustomerById(req: Request, res: Response): Promise<void> {
     try {
       console.log('[CustomersController] getCustomerById');
       const { id } = req.params;
-      const customer = await this.customersService.getCustomerById(parseInt(id));
+      
+      // ✅ Ya no necesitamos chequear null, el service lanza error
+      const customer = await this.customersService.getCustomerById(Number(id));
+
       res.status(200).json({ data: customer });
-    }
-    catch (error) {
-      console.error('[CustomersController] Error en getCustomerById:', error);
-      res.status(500).json({
-        error: {
-          message: 'Error al obtener cliente por ID',
-          code: 'SERVER_ERROR',
-          status: 500,
-        },
-      });
+    } catch (error) {
+      this.handleError(res, error);
     }
   }
 
@@ -132,42 +74,27 @@ export class CustomersController {
       const { id } = req.params;
       const data = req.body;
 
-      const updated = await this.customersService.updateCustomer(parseInt(id), data);
-
+      const updated = await this.customersService.updateCustomer(Number(id), data);
       res.status(200).json({ data: updated });
 
-    } catch (error: any) {
-      console.error('[CustomersController] Error en updateCustomer:', error);
-
-      if (error.message === 'CUSTOMER_NOT_FOUND') {
-        res.status(404).json({
-          error: { message: 'Cliente no encontrado', code: 'CUSTOMER_NOT_FOUND', status: 404 }
-        });
-        return;
-      }
-
-      res.status(500).json({
-        error: { message: 'Error al actualizar cliente', code: 'SERVER_ERROR', status: 500 }
-      });
+    } catch (error) {
+      this.handleError(res, error);
     }
   }
 
-  /// POST /api/customers
+  // POST /api/customers
   async createCustomer(req: Request, res: Response): Promise<void> {
     try {
       console.log('---- [Controller] POST /api/customers ----');
-      console.log('[Controller] Body recibido:', req.body);
-
       const data = req.body;
 
       console.log('[Controller] Llamando al service.createCustomer...');
       const newCustomer = await this.customersService.createCustomer(data);
-      console.log('[Controller] Respuesta del service:', newCustomer);
+      console.log('[Controller] Cliente creado con ID:', newCustomer.id);
 
       res.status(201).json({ data: newCustomer });
     } catch (error: any) {
-      console.error('[Controller] Error en createCustomer:', error);
-
+      // Email duplicado (error de PostgreSQL)
       if (error.code === '23505' && error.constraint === 'customers_email_key') {
         res.status(400).json({
           error: {
@@ -178,48 +105,50 @@ export class CustomersController {
         });
         return;
       }
-      res.status(500).json({
-        error: {
-          message: 'Error al crear cliente',
-          code: 'SERVER_ERROR',
-          status: 500,
-        }
-      });
+
+      this.handleError(res, error);
     }
   }
 
   // DELETE /api/customers/:id
   async deleteCustomer(req: Request, res: Response): Promise<void> {
     try {
-      const id = Number(req.params.id);
+      const { id } = req.params;
+
       console.log('[Controller] DELETE /customers/', id);
 
-      await this.customersService.deleteCustomer(id);
+      await this.customersService.deleteCustomer(Number(id));
 
       console.log('[Controller] Cliente eliminado OK');
       res.status(204).send();
 
     } catch (error) {
-      const err = error as Error;
-
-      console.error('[Controller] Error en deleteCustomer:', err.message);
-
-      if (err.message === 'CUSTOMER_NOT_FOUND') {
-        res.status(404).json({ message: 'Cliente no encontrado' });
-        return;
-      }
-
-      if (err.message === 'CUSTOMER_HAS_BOOKINGS') {
-        res.status(409).json({
-          message: 'El cliente no puede eliminarse porque tiene reservas asociadas.'
-        });
-        return;
-      }
-
-      res.status(500).json({ message: 'Error al eliminar cliente' });
+      this.handleError(res, error);
     }
   }
 
+  // ✅ Método centralizado para manejar errores
+  private handleError(res: Response, error: unknown): void {
+    console.error('[Controller] Error:', error);
 
+    if (error instanceof AppError) {
+      const appError = error as AppError;
+      res.status(appError.statusCode).json({
+        error: {
+          message: appError.message,
+          code: appError.code,
+          status: appError.statusCode
+        }
+      });
+      return;
+    }
 
+    res.status(500).json({
+      error: {
+        message: 'Error interno del servidor',
+        code: 'SERVER_ERROR',
+        status: 500
+      }
+    });
+  }
 }
