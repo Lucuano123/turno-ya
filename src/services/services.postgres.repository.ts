@@ -17,8 +17,8 @@ export class ServicesPostgresRepository implements ServicesRepository {
 
   async update(id: string, service: Services): Promise<Services | undefined> {
     const result = await pool.query(
-      'UPDATE services SET name = $1, description = $2, duration = $3, price = $4, category_id = $5, image_url = $6, updated_at = NOW() WHERE id = $7 RETURNING *',
-      [service.name, (service as any).description, (service as any).duration, service.price, service.category_id, service.image_url, id]
+      'UPDATE services SET name = $1, description = $2, duration = $3, price = $4, image_url = $5, updated_at = NOW() WHERE id = $6 RETURNING *',
+      [service.name, (service as any).description, (service as any).duration, service.price, service.image_url, id]
     );
     return result.rows[0] as Services || undefined;
   }
@@ -45,8 +45,8 @@ export class ServicesPostgresRepository implements ServicesRepository {
 
   async add(service: Services): Promise<Services> {
     const result = await pool.query(
-      'INSERT INTO services (name, description, duration, price, category_id, image_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *',
-      [service.name, (service as any).description, (service as any).duration, service.price, service.category_id, service.image_url]
+      'INSERT INTO services (name, description, duration, price, image_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *',
+      [service.name, (service as any).description, (service as any).duration, service.price, service.image_url]
     );
     return result.rows[0] as Services;
   }
