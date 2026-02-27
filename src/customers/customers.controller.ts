@@ -53,13 +53,12 @@ export class CustomersController {
     }
   }
 
-  // ✅ GET /api/customers/:id - AHORA MÁS SIMPLE
+  // GET /api/customers/:id 
   async getCustomerById(req: Request, res: Response): Promise<void> {
     try {
       console.log('[CustomersController] getCustomerById');
       const { id } = req.params;
       
-      // ✅ Ya no necesitamos chequear null, el service lanza error
       const customer = await this.customersService.getCustomerById(Number(id));
 
       res.status(200).json({ data: customer });
@@ -94,7 +93,6 @@ export class CustomersController {
 
       res.status(201).json({ data: newCustomer });
     } catch (error: any) {
-      // Email duplicado (error de PostgreSQL)
       if (error.code === '23505' && error.constraint === 'customers_email_key') {
         res.status(400).json({
           error: {
@@ -127,7 +125,7 @@ export class CustomersController {
     }
   }
 
-  // ✅ Método centralizado para manejar errores
+  // Método centralizado para manejar errores
   private handleError(res: Response, error: unknown): void {
     console.error('[Controller] Error:', error);
 
