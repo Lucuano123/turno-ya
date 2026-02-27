@@ -65,7 +65,6 @@ export class CustomersPostgresRepository {
     return rows;
   }
 
-  // ✅ Create - confía en que los datos ya vienen validados y hasheados
   async create(data: Partial<Customer>): Promise<Customer> {
     const query = `
       INSERT INTO customers (
@@ -97,14 +96,12 @@ export class CustomersPostgresRepository {
     return rows[0];
   }
 
-  // ✅ Update - merge manual simple (sin query dinámico)
   async update(id: number, data: UpdateCustomerInput): Promise<Customer> {
     const customer = await this.findById(id);
     if (!customer) {
       throw new Error('CUSTOMER_NOT_FOUND');
     }
 
-    // Merge solo los campos permitidos
     const merged = {
       first_name: data.first_name ?? customer.first_name,
       last_name: data.last_name ?? customer.last_name,
@@ -155,7 +152,7 @@ export class CustomersPostgresRepository {
     } catch (err: any) {
       console.error('[Repository] Error eliminando cliente:', err);
 
-      // Detecta violación de FK
+      // Detecta violación de FK para no eliminar un cliente que tenga un turno activo
       if (err.code === '23503') {
         throw new ConflictError('El cliente tiene reservas asociadas');
       }
