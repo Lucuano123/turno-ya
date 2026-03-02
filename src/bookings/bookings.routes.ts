@@ -1,15 +1,23 @@
 import { Router } from 'express';
 import { BookingsController } from './bookings.controller.js';
+import { validate, validateParams } from '../middleware/validation.middleware.js';
+import {
+   updateBookingSchema,
+   idParamSchema
+ } from './bookings.schemas.js';
 
 export const bookingsRouter = Router();
 const bookingsController = new BookingsController();
 
-// Ruta para obtener las reservas diarias del profesional (HU10)
-bookingsRouter.get(
-  '/professional/bookings',
-  bookingsController.getProfessionalBookings.bind(bookingsController)
-);
+// Definición de rutas
+bookingsRouter.get('/all', bookingsController.getAllBookings.bind(bookingsController));
+bookingsRouter.get('/:id', validateParams(idParamSchema), bookingsController.getBookingById.bind(bookingsController));
+bookingsRouter.post('/', bookingsController.addBookings.bind(bookingsController));
+bookingsRouter.put('/:id', validateParams(idParamSchema), validate(updateBookingSchema), bookingsController.updateBooking.bind(bookingsController));
+bookingsRouter.delete( '/:id', validateParams(idParamSchema), bookingsController.deleteBooking.bind(bookingsController));
 
+export default bookingsRouter;
+ /* 
 // Definición de rutas
 bookingsRouter.post('/', bookingsController.addBookings.bind(bookingsController));
 bookingsRouter.get('/', bookingsController.getAllBookings.bind(bookingsController));
@@ -41,5 +49,4 @@ function sanitizeBookingInput(req:any, res:any, next:any) {
 
   next()
 }
-
-export default bookingsRouter;
+  */

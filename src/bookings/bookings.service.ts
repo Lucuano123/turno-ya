@@ -1,18 +1,14 @@
 import { BookingsPostgresRepository } from './bookings.postgres.repository.js';
 import { Booking } from './bookings.entity.js';
+import { UpdateBookingInput } from './bookings.schemas.js';
+import { NotFoundError, ValidationError } from '../errors/custom-errors.js';
+import bcrypt from 'bcrypt';
 
 export class BookingsService {
+
+    private readonly SALT_ROUNDS = 10;
+
     constructor(private bookingsRepository: BookingsPostgresRepository) { }
-
-    async getProfessionalBookings(date?: string): Promise<Booking[]> {
-        try {
-            return await this.bookingsRepository.findAll();
-        } catch (error) {
-            console.error('[BookingsService] Error al obtener reservas del profesional:', error);
-            throw error;
-        }
-    }
-
 
     async addBookings(newBooking: Booking): Promise<Booking> {
         try {
@@ -23,52 +19,51 @@ export class BookingsService {
         }
     }
 
-
     async getAllBookings(): Promise<Booking[]> {
-        try {
-            return await this.bookingsRepository.findAll();
-        } catch (error) {
-            console.error('[BookingsService] Error al obtener reservas:', error);
-            throw error;
-        }
+        return await this.bookingsRepository.findAll();
     }
 
-    async getBookingById(id: number): Promise<Booking | null> {
-        try {
-            const booking = await this.bookingsRepository.findById(id);
-            return booking || null;
-        } catch (error) {
-            console.error('[BookingsService] Error al obtener reserva por ID:', error);
-            throw error;
+    async getBookingById(id: number): Promise<Booking> {
+        const booking = await this.bookingsRepository.findById(id);
+
+        if (!booking) {
+            throw new NotFoundError('Turno');
         }
+
+        return booking;
     }
+
     async deleteBooking(id: number): Promise<void> {
-        try {
-            const existing = await this.bookingsRepository.findById(id);
 
-            if (!existing) {
-                throw new Error('BOOKING_NOT_FOUND');
-            }
+        const booking = await this.bookingsRepository.findById(id);
 
-            await this.bookingsRepository.delete(id);
-        } catch (error) {
-            console.error('[BookingsService] Error al eliminar la reserva:', error);
-            throw error;
+        if (!booking) {
+            throw new NotFoundError('El turno no existe');
         }
-    }
-    async updateBooking(id: number, updatedBooking: Booking): Promise<Booking | null> {
-        try {
-            const existing = await this.bookingsRepository.findById(id);
 
-            if (!existing) {
-                throw new Error('BOOKING_NOT_FOUND');
-            }
-
-            return await this.bookingsRepository.update(id, updatedBooking);
-        } catch (error) {
-            console.error('[BookingsService] Error al actualizar reserva:', error);
-            throw error;
+        if (booking.booking_status !== 'cancelled') {
+            throw new ValidationError('Solo se pueden eliminar turnos cancelados');
         }
+        console.log('Intentando eliminar booking ID:', id);
+        console.log('Estado del booking:', booking.booking_status);
+        await this.bookingsRepository.delete(id);
     }
+
+    async updateBooking(id: number, data: UpdateBookingInput): Promise<Booking> {
+        const existing = await this.bookingsRepository.findById(id);
+
+        if (!existing) {
+            throw new NotFoundError('Turno');
+        }
+
+        const updated = await this.bookingsRepository.update(id, data);
+
+        if (!updated) {
+            throw new Error('Error al actualizar el turno');
+        }
+
+        return updated;
+    }
+
 
 }

@@ -1,67 +1,43 @@
 import { Booking } from './bookings.entity.js';
 import { pool } from '../config/database.config.js';
+import { UpdateBookingInput } from './bookings.schemas.js';
+import { ConflictError } from '../errors/custom-errors.js';
 
 export class BookingsPostgresRepository {
 
-  async add(booking: Booking): Promise<Booking> {
-    try {
-      const res = await pool.query(
-        `INSERT INTO bookings (
-          client_id, 
-          client_name,
-          service_id, 
-          booking_date, 
-          start_time, 
-          end_time, 
-          booking_status, 
-          treatment_id, 
-          created_at, 
-          updated_at
-        )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING *`,
-        [
-          booking.client_id,
-          booking.client_name,
-          booking.service_id,
-          booking.booking_date,
-          booking.start_time,
-          booking.end_time,
-          booking.booking_status,
-          booking.treatment_id,
-          booking.created_at,
-          booking.updated_at
-        ]
-      );
+async add(data: Partial<Booking>): Promise<Booking> {
+  const query = `
+    INSERT INTO bookings (
+      client_id,
+      client_name,
+      service_id,
+      booking_date,
+      start_time,
+      end_time,
+      booking_status
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *;
+  `;
 
-      const newBooking = res.rows[0];
-      return new Booking(
-        newBooking.id,
-        newBooking.client_id,
-        newBooking.client_name,
-        newBooking.service_id,
-        newBooking.booking_date,
-        newBooking.start_time,
-        newBooking.end_time,
-        newBooking.booking_status,
-        newBooking.treatment_id,
-        newBooking.created_at,
-        newBooking.updated_at
-      );
-    } catch (error) {
-      console.error('Error adding booking:', error);
-      throw error;
-    }
-  }
+  const params = [
+    data.client_id,
+    data.client_name,
+    data.service_id,
+    data.booking_date,
+    data.start_time,
+    data.end_time,
+    data.booking_status
+  ];
+
+  const { rows } = await pool.query<Booking>(query, params);
+  return rows[0];
+}
 
   async findById(id: number): Promise<Booking | null> {
-    try {
-      const query = 'SELECT * FROM bookings WHERE id = $1';
-      const { rows } = await pool.query<Booking>(query, [id]);
-      return rows[0] || null;
-    } catch (error) {
-      throw new Error('Error al obtener reserva por ID');
-    }
+    const query = 'SELECT * FROM bookings WHERE id = \$1';
+    const { rows } = await pool.query<Booking>(query, [id]);
+    return rows[0] || null;
   }
 
   async findAll(): Promise<Booking[]> {
@@ -78,81 +54,43 @@ export class BookingsPostgresRepository {
         created_at
         FROM bookings 
         ORDER BY id`;
+    const { rows } = await pool.query<Booking>(query);
+    return rows;
+  }
+
+  async delete(id: number): Promise<void> {
     try {
-      const { rows } = await pool.query<Booking>(query);
-      return rows;
-    } catch (error) {
-      throw new Error('Error al obtener todas las reservas');
+      await pool.query('DELETE FROM payments WHERE booking_id = $1', [id]);
+
+      await pool.query('DELETE FROM bookings WHERE id = $1', [id]);
+
+    } catch (err) {
+      console.error('[Repository] Error eliminando turno:', err);
+      throw err;
     }
   }
 
-  // HU10 para obtener las reservas del profesional
-  async getProfessionalBookings(date: string): Promise<Booking[]> {
+  async update(id: number, data: UpdateBookingInput): Promise<Booking | null> {
     try {
-      const res = await pool.query(
-        `SELECT * FROM bookings WHERE booking_date = $1`,
-        [date]
-      );
-      return res.rows.map(row => new Booking(
-        row.id,
-        row.client_id,
-        row.client_name,
-        row.service_id,
-        row.booking_date,
-        row.start_time,
-        row.end_time,
-        row.booking_status,
-        row.treatment_id,
-        row.created_at,
-        row.updated_at
-      ));
-    } catch (error) {
-      console.error('Error getting professional bookings:', error);
-      throw error;
-    }
-  }
-  async delete(id: number): Promise<void> {
-    try {
-      const query = 'DELETE FROM bookings WHERE id = $1';
-      const result = await pool.query(query, [id]);
-      if (result.rowCount === 0) {
-        throw new Error('BOOKING_NOT_FOUND');
+      const fields = Object.keys(data);
+      const values = Object.values(data);
+
+      if (fields.length === 0) {
+        return null;
       }
-    } catch (error) {
-      throw new Error('Error al eliminar la reserva');
-    }
-  }
-  async update(id: number, booking: Booking): Promise<Booking | null> {
-    try {
+
+      const setClause = fields
+        .map((field, index) => `${field} = $${index + 1}`)
+        .join(', ');
+
       const query = `
       UPDATE bookings
-      SET 
-        client_id = $1,
-        client_name = $2,
-        service_id = $3,
-        booking_date = $4,
-        start_time = $5,
-        end_time = $6,
-        booking_status = $7,
-        treatment_id = $8,
-        updated_at = NOW()
-      WHERE id = $9
+      SET ${setClause}, updated_at = NOW()
+      WHERE id = $${fields.length + 1}
       RETURNING *;
     `;
 
-      const values = [
-        booking.client_id,
-        booking.client_name,
-        booking.service_id,
-        booking.booking_date,
-        booking.start_time,
-        booking.end_time,
-        booking.booking_status,
-        booking.treatment_id,
-        id
-      ];
-
-      const result = await pool.query(query, values);
+      const result = await pool.query(query, [...values, id]);
 
       if (result.rows.length === 0) return null;
 
