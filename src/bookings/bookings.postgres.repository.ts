@@ -5,34 +5,36 @@ import { ConflictError } from '../errors/custom-errors.js';
 
 export class BookingsPostgresRepository {
 
-async add(data: Partial<Booking>): Promise<Booking> {
-  const query = `
+  async add(data: Partial<Booking>): Promise<Booking> {
+    const query = `
     INSERT INTO bookings (
       client_id,
       client_name,
       service_id,
+      service_name,
       booking_date,
       start_time,
       end_time,
       booking_status
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *;
   `;
 
-  const params = [
-    data.client_id,
-    data.client_name,
-    data.service_id,
-    data.booking_date,
-    data.start_time,
-    data.end_time,
-    data.booking_status
-  ];
+    const params = [
+      data.client_id,
+      data.client_name,
+      data.service_id,
+      data.service_name,
+      data.booking_date,
+      data.start_time,
+      data.end_time,
+      data.booking_status
+    ];
 
-  const { rows } = await pool.query<Booking>(query, params);
-  return rows[0];
-}
+    const { rows } = await pool.query<Booking>(query, params);
+    return rows[0];
+  }
 
   async findById(id: number): Promise<Booking | null> {
     const query = 'SELECT * FROM bookings WHERE id = \$1';
@@ -40,11 +42,12 @@ async add(data: Partial<Booking>): Promise<Booking> {
     return rows[0] || null;
   }
 
-  async findAll(): Promise<Booking[]> {
+  /*async findAll(): Promise<Booking[]> {
     const query = `SELECT  id,
         client_id,
         client_name,
         service_id,
+        service_name,
         booking_date,
         start_time,
         end_time,
@@ -56,12 +59,33 @@ async add(data: Partial<Booking>): Promise<Booking> {
         ORDER BY id`;
     const { rows } = await pool.query<Booking>(query);
     return rows;
+  }*/
+
+  async findAll(): Promise<Booking[]> {
+    const query = `
+    SELECT  
+        b.id,
+        b.client_id,
+        b.client_name,
+        b.service_id,
+        s.name AS service_name,
+        b.booking_date,
+        b.start_time,
+        b.end_time,
+        b.booking_status,
+        b.treatment_id,
+        b.updated_at,
+        b.created_at
+    FROM bookings b
+    JOIN services s ON b.service_id = s.id
+    ORDER BY b.id`;
+
+    const { rows } = await pool.query<Booking>(query);
+    return rows;
   }
 
   async delete(id: number): Promise<void> {
     try {
-      await pool.query('DELETE FROM payments WHERE booking_id = $1', [id]);
-
       await pool.query('DELETE FROM bookings WHERE id = $1', [id]);
 
     } catch (err) {
@@ -101,6 +125,7 @@ async add(data: Partial<Booking>): Promise<Booking> {
         updated.client_id,
         updated.client_name,
         updated.service_id,
+        updated.service_name,
         updated.booking_date,
         updated.start_time,
         updated.end_time,

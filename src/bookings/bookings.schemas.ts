@@ -15,6 +15,8 @@ export const updateBookingSchema = z.object({
   client_id: z.coerce.number().int().positive().optional(),
   client_name: z.string().min(1).optional(),
   service_id: z.coerce.number().int().positive().optional(),
+  service_name: z.string().min(1).optional(),
+
 
   booking_date: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)

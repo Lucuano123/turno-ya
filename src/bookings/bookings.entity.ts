@@ -1,4 +1,3 @@
-// Entidad TypeScript para bookings
 import crypto from 'node:crypto';
 
 export class Booking {
@@ -7,6 +6,7 @@ export class Booking {
     public client_id: number,
     public client_name: string,
     public service_id: number,
+    public service_name: string,
     public booking_date: Date,
     public start_time: string,
     public end_time: string,
