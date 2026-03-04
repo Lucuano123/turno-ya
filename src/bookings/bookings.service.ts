@@ -1,22 +1,15 @@
 import { BookingsPostgresRepository } from './bookings.postgres.repository.js';
 import { Booking } from './bookings.entity.js';
-import { UpdateBookingInput } from './bookings.schemas.js';
-import { NotFoundError, ValidationError } from '../errors/custom-errors.js';
-import bcrypt from 'bcrypt';
+import { CreateBookingInput, UpdateBookingInput } from './bookings.schemas.js';
+import { ConflictError, NotFoundError, ValidationError } from '../errors/custom-errors.js';
+
 
 export class BookingsService {
 
-    private readonly SALT_ROUNDS = 10;
-
     constructor(private bookingsRepository: BookingsPostgresRepository) { }
 
-    async addBookings(newBooking: Booking): Promise<Booking> {
-        try {
-            return await this.bookingsRepository.add(newBooking);
-        } catch (error) {
-            console.error('[BookingsService] Error al agregar la reserva:', error);
-            throw error;
-        }
+    async addBooking(newBooking: CreateBookingInput): Promise<Booking> {
+        return await this.bookingsRepository.add(newBooking);
     }
 
     async getAllBookings(): Promise<Booking[]> {
@@ -35,19 +28,22 @@ export class BookingsService {
 
     async deleteBooking(id: number): Promise<void> {
 
+        console.log('[BookingsService] deleteBooking - ID:', id);
+
         const booking = await this.bookingsRepository.findById(id);
 
         if (!booking) {
-            throw new NotFoundError('El turno no existe');
+            throw new NotFoundError('Turno');
         }
 
         if (booking.booking_status !== 'cancelled') {
-            throw new ValidationError('Solo se pueden eliminar turnos cancelados');
+            throw new ConflictError('Solo se pueden eliminar turnos cancelados');
         }
-        console.log('Intentando eliminar booking ID:', id);
-        console.log('Estado del booking:', booking.booking_status);
+
         await this.bookingsRepository.delete(id);
+        console.log('[BookingsService] Turno eliminado OK');
     }
+
 
     async updateBooking(id: number, data: UpdateBookingInput): Promise<Booking> {
         const existing = await this.bookingsRepository.findById(id);
