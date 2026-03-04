@@ -24,64 +24,6 @@ GET http://localhost:3000/api/customers/pending
 x-user-id: 11
 
 ################################################################################
-### 2. Aprobar un usuario pendiente (ID = 2)
-# Se cambia el estado del usuario a "approved".
-################################################################################
-
-PUT http://localhost:3000/api/customers/2/validate
-x-user-id: 11
-Content-Type: application/json
-
-{
-  "status": "approved"
-}
-
-################################################################################
-### 3. Rechazar un usuario pendiente (ID = 3)
-# Se cambia el estado del usuario a "rejected".
-################################################################################
-
-PUT http://localhost:3000/api/customers/3/validate
-x-user-id: 11
-Content-Type: application/json
-
-{
-  "status": "rejected"
-}
-
-################################################################################
-### 4. Verificar la nueva lista de pendientes
-# Ahora deberían quedar solo 3 usuarios pendientes (había 5, se procesaron 2).
-################################################################################
-
-GET http://localhost:3000/api/customers/pending
-x-user-id: 11
-
-################################################################################
-### 4.1 Verificar todos los usuarios (no solo los pendientes)
-# Este endpoint devuelve todos los clientes visibles por el profesional.
-# Se debería ver que:
-# - El usuario 2 tiene status 'approved'
-# - El usuario 3 tiene status 'rejected'
-################################################################################
-
-GET http://localhost:3000/api/customers/all
-x-user-id: 11
-
-################################################################################
-### 5. Intentar aprobar un usuario ya aprobado (ID = 6)
-# Este paso debería devolver un error. El usuario no está pendiente.
-################################################################################
-
-PUT http://localhost:3000/api/customers/6/validate
-x-user-id: 11
-Content-Type: application/json
-
-{
-  "status": "approved"
-}
-
-################################################################################
 # FIN DEL FLUJO DE PRUEBAS
 # Para volver a empezar, ejecutar nuevamente el endpoint de inicialización al comienzo del archivo.
 ################################################################################
@@ -96,7 +38,6 @@ Content-Type: application/json
   "password": "123456",
   "phone": "3411234567",
   "birth_date": "1990-05-10",
-  "status": "pending",
   "role": "customer"
 }
 

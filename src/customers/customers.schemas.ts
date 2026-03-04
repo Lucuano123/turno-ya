@@ -83,13 +83,6 @@ export const updateCustomerSchema = z.object({
   message: 'Debes proporcionar al menos un campo para actualizar'
 });
 
-// Schema para validar usuario (admin)
-export const validateUserSchema = z.object({
-  status: z.enum(['approved', 'rejected'], {
-    message: 'Estado inválido. Debe ser "approved" o "rejected"'
-  })
-});
-
 // Schema para validar ID en params
 export const idParamSchema = z.object({
   id: z.string()
@@ -100,4 +93,3 @@ export const idParamSchema = z.object({
 // Tipos inferidos desde los schemas
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
-export type ValidateUserInput = z.infer<typeof validateUserSchema>;

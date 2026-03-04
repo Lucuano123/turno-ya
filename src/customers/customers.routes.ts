@@ -4,7 +4,6 @@ import { validate, validateParams } from '../middleware/validation.middleware.js
 import {
   createCustomerSchema,
   updateCustomerSchema,
-  validateUserSchema,
   idParamSchema
 } from './customers.schemas.js';
 
