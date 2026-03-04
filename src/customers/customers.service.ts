@@ -9,32 +9,15 @@ export class CustomersService {
 
   constructor(private customersRepository: CustomersPostgresRepository) {}
 
-  // Valida usuario (approve/reject)
-  async validateUser(userId: number, status: 'approved' | 'rejected'): Promise<Customer> {
-    const user = await this.customersRepository.findById(userId);
-
-    if (!user) {
-      throw new NotFoundError('Usuario');
-    }
-
-    if (user.status !== 'pending') {
-      throw new ValidationError('El usuario no está en estado pendiente');
-    }
-
-    return await this.customersRepository.updateStatus(userId, status);
-  }
 
   // Obtiene todos los clientes
   async getAllCustomers(): Promise<Customer[]> {
     return await this.customersRepository.findAll();
   }
 
-  // Obtiene usuarios pendientes
-  async getPendingUsers(): Promise<Customer[]> {
-    return await this.customersRepository.findPendingUsers();
-  }
+  
 
-  // ✅ Obtiene cliente por ID - AHORA LANZA ERROR SI NO EXISTE
+  // Obtiene cliente por ID
   async getCustomerById(id: number): Promise<Customer> {
     const customer = await this.customersRepository.findById(id);
     
@@ -54,7 +37,6 @@ export class CustomersService {
     const customerData = {
       ...data,
       password: hashedPassword,
-      status: 'pending' as const,
       role: 'customer' as const
     };
 

@@ -22,36 +22,6 @@ export class CustomersController {
     }
   }
 
-  // GET /api/customers/pending
-  async getPendingUsers(req: Request, res: Response): Promise<void> {
-    try {
-      console.log('[CustomersController] getPendingUsers');
-      const pendingUsers = await this.customersService.getPendingUsers();
-      res.status(200).json({ data: pendingUsers });
-    } catch (error) {
-      this.handleError(res, error);
-    }
-  }
-
-  // PUT /api/customers/:id/validate
-  async validateUser(req: Request, res: Response): Promise<void> {
-    try {
-      console.log('[CustomersController] validateUser');
-      const { id } = req.params;
-      const { status } = req.body;
-
-      const user = await this.customersService.validateUser(Number(id), status);
-
-      res.status(200).json({
-        id: user.id,
-        email: user.email,
-        status: user.status,
-        message: 'Estado del usuario actualizado correctamente',
-      });
-    } catch (error) {
-      this.handleError(res, error);
-    }
-  }
 
   // GET /api/customers/:id 
   async getCustomerById(req: Request, res: Response): Promise<void> {

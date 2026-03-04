@@ -28,37 +28,8 @@ export class CustomersPostgresRepository {
         first_name || ' ' || last_name AS name,
         email,
         phone,
-        created_at,
-        status 
+        created_at
       FROM customers 
-      ORDER BY id
-    `;
-    const { rows } = await pool.query<Customer>(query);
-    return rows;
-  }
-
-  async updateStatus(id: number, status: 'approved' | 'rejected'): Promise<Customer> {
-    const query = `
-      UPDATE customers 
-      SET status = \$1, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = \$2 
-      RETURNING *
-    `;
-    const { rows } = await pool.query<Customer>(query, [status, id]);
-    return rows[0];
-  }
-
-  async findPendingUsers(): Promise<Customer[]> {
-    const query = `
-      SELECT 
-        id,
-        first_name || ' ' || last_name AS name,
-        email,
-        phone,
-        created_at,
-        status
-      FROM customers
-      WHERE status = 'pending'
       ORDER BY id
     `;
     const { rows } = await pool.query<Customer>(query);
@@ -74,7 +45,6 @@ export class CustomersPostgresRepository {
         password,
         phone,
         birth_date,
-        status,
         role
       )
       VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8)
@@ -88,7 +58,6 @@ export class CustomersPostgresRepository {
       data.password, // Ya viene hasheado del service
       data.phone ?? null,
       data.birth_date ?? null,
-      data.status,
       data.role
     ];
 
@@ -110,7 +79,6 @@ export class CustomersPostgresRepository {
       // Campos que NO se modifican desde update normal
       email: customer.email,
       password: customer.password,
-      status: customer.status,
       role: customer.role
     };
 
@@ -122,10 +90,9 @@ export class CustomersPostgresRepository {
         password = \$4,
         phone = \$5,
         birth_date = \$6,
-        status = \$7,
-        role = \$8,
+        role = \$7,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = \$9
+      WHERE id = \$8
       RETURNING *
     `;
 
@@ -136,7 +103,6 @@ export class CustomersPostgresRepository {
       merged.password,
       merged.phone,
       merged.birth_date,
-      merged.status,
       merged.role,
       id
     ];

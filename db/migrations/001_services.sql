@@ -11,7 +11,7 @@ CREATE TABLE services (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insertar servicios de peluquería
+-- Insertar servicios de ejemplo
 INSERT INTO services (name, description, duration, price) VALUES
   ('Servicio 1', 'Descripción 1', 30, 25.00),
   ('Servicio 2', 'Descripción 2', 90, 60.00),

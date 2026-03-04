@@ -17,12 +17,6 @@ customerRouter.get(
   customersController.getAllCustomers.bind(customersController)
 );
 
-// GET /api/customers/pending
-customerRouter.get(
-  '/pending',
-  customersController.getPendingUsers.bind(customersController)
-);
-
 // GET /api/customers/:id
 customerRouter.get(
   '/:id',
@@ -45,13 +39,6 @@ customerRouter.put(
   customersController.updateCustomer.bind(customersController)
 );
 
-// PUT /api/customers/:id/validate (admin)
-customerRouter.put(
-  '/:id/validate',
-  validateParams(idParamSchema),
-  validate(validateUserSchema),
-  customersController.validateUser.bind(customersController)
-);
 
 // DELETE /api/customers/:id
 customerRouter.delete(
